@@ -1,7 +1,7 @@
 on:
   push:
     branches:
-      - main
+      - origin/v100
 #  pull_request:
 #    branches:
 #      - main
