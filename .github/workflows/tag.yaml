@@ -1,26 +1,84 @@
 name: Build and Release Android
+
 on:
   push:
     tags:
       - 'v*'
+
+permissions:
+  contents: write
+
 jobs:
   build:
-    name: Build Android
+    name: Build Android (APK & AAB)
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-java@v2
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
         with:
-          distribution: 'zulu'
-          java-version: '11'
-      - uses: subosito/flutter-action@v2
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.22.0'
-      - run: flutter clean
-      - run: flutter pub get
-      - run: flutter build apk
-      - name: Push APK to Releases
-        uses: ncipollo/release-action@v1
+          flutter-version: '3.22.0'   # hoặc '3.24.x' nếu dự án đã nâng
+          channel: 'stable'
+          cache: true
+
+      - name: Cache Pub
+        uses: actions/cache@v4
         with:
-          artifacts: "build/app/outputs/flutter-apk/app-release.apk"
-          token: ${{secrets.TOKEN_V1}}
+          path: ~/.pub-cache
+          key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.lock') }}
+          restore-keys: ${{ runner.os }}-pub-
+
+      - name: Flutter Pub Get
+        run: flutter pub get
+
+      - name: Derive version from tag
+        run: |
+          echo "VERSION_NAME=${GITHUB_REF_NAME#v}" >> $GITHUB_ENV
+          echo "BUILD_NUMBER=${GITHUB_RUN_NUMBER}" >> $GITHUB_ENV
+
+      # Nếu bạn đã cấu hình signing trong android/key.properties, gradle sẽ tự ký.
+      # Hoặc có thể export secrets thành env ở đây trước khi build.
+
+      - name: Build APK (split per ABI)
+        run: |
+          flutter build apk --release \
+            --build-name "$VERSION_NAME" \
+            --build-number "$BUILD_NUMBER" \
+            --split-per-abi
+
+      - name: Build AAB
+        run: |
+          flutter build appbundle --release \
+            --build-name "$VERSION_NAME" \
+            --build-number "$BUILD_NUMBER"
+
+      - name: Upload build artifacts (CI view)
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-builds-${{ env.VERSION_NAME }}
+          path: |
+            build/app/outputs/flutter-apk/*.apk
+            build/app/outputs/bundle/release/*.aab
+
+      - name: Create GitHub Release and attach files
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            build/app/outputs/flutter-apk/*.apk
+            build/app/outputs/bundle/release/*.aab
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ env.VERSION_NAME }}
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-rc') || contains(github.ref_name, '-beta') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # không cần PAT riêng
