@@ -1,38 +1,38 @@
-on:
-  push:
-    branches:
-      - main
-#  pull_request:
+#on:
+#  push:
 #    branches:
 #      - main
-name: Build and Release apk
-jobs:
-  build:
-    name: Build APK
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Setup Node.js
-        uses: actions/setup-node@v2
-        with:
-          node-version: '20.15.0'
-      - run: node -v
-      - uses: actions/setup-java@v2
-        with:
-          distribution: 'zulu'
-          java-version: '11'
-      - uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.22.0'
-      #          channel: 'stable'
-      - run: flutter pub get
-      - run: flutter build apk
-      - name: Upload artifact to Firebase App Distribution
-        uses: wzieba/Firebase-Distribution-Github-Action@v1.7.0
-        with:
-#          appId firebase
-          appId: ${{secrets.FIREBASE_APPID_V1}}
-#           firebase login:ci
-          token: ${{secrets.FIREBASE_TOKEN_V1}}
-          groups: testers
-          file: build/app/outputs/flutter-apk/app-release.apk
+##  pull_request:
+##    branches:
+##      - main
+#name: Build and Release apk
+#jobs:
+#  build:
+#    name: Build APK
+#    runs-on: ubuntu-latest
+#    steps:
+#      - uses: actions/checkout@v2
+#      - name: Setup Node.js
+#        uses: actions/setup-node@v2
+#        with:
+#          node-version: '20.15.0'
+#      - run: node -v
+#      - uses: actions/setup-java@v2
+#        with:
+#          distribution: 'zulu'
+#          java-version: '11'
+#      - uses: subosito/flutter-action@v2
+#        with:
+#          flutter-version: '3.22.0'
+#      #          channel: 'stable'
+#      - run: flutter pub get
+#      - run: flutter build apk
+#      - name: Upload artifact to Firebase App Distribution
+#        uses: wzieba/Firebase-Distribution-Github-Action@v1.7.0
+#        with:
+##          appId firebase
+#          appId: ${{secrets.FIREBASE_APPID_V1}}
+##           firebase login:ci
+#          token: ${{secrets.FIREBASE_TOKEN_V1}}
+#          groups: testers
+#          file: build/app/outputs/flutter-apk/app-release.apk
